@@ -11,7 +11,7 @@ Copy these files to target directory:
 
 Usage:
 	>>> from throwup_server import throwup_server
-	>>> throwup_server.throwup( path-to-directory )
+	>>> throwup_server.throwup( path-to-directory [, port=port])
 
 	$ python throwup_server.py [path_to_directory]
 	
@@ -20,14 +20,16 @@ import sys
 import time
 import subprocess as sp
 
-def throwup( *path_to_dir ):
+def throwup( **kwargs ):
+	
+	path_to_dir = kwargs.get('path_to_dir')
 	
 	if not path_to_dir:
 		print 'Need directory'
 		return 'Need directory'
 	
-	path_to_dir = path_to_dir[0]
-	
+		
+	#------------------
 	#------------------
 	# Read in file data 
 	#------------------
@@ -55,29 +57,34 @@ def throwup( *path_to_dir ):
 	throwup_path = path_to_dir+'/throwup_filelist'
 	with open(throwup_path,'w') as f:
 		f.write(throwup_filelist)
-	
+	#------------------
+	#------------------
+
 
 	time.sleep(0.5)
-	
-	
-	#cmd = ('cd %s; chmod +x *throwup*; python serve_throwup.py &' % ( path_to_dir )).split()
-	#sp.Popen(cmd, shell=True)
-	
-	
+
 	cmd = 'cd %s; chmod +x *throwup*; python start_throwup.py' % path_to_dir
+	#cmd = 'cd %s; chmod +x *throwup*; python start_throwup.py port=%s' % ( path_to_dir, kwargs.get('port') )
 	sp.Popen(cmd,shell=True)
 	
 
-def cleanup():
-	'''Find and kill serve_throwup.py'''
+def cleanup( **kwargs ):
+	'''Find and kill any serve_throwup.py'''
+	
+	path_to_dir = kwargs['path_to_dir']
+	
 	cmd = 'ps -fA | grep serve_throwup'
 	result = [x for x in sp.Popen(cmd,stdout=sp.PIPE,shell=True).communicate()[0].split('\n') if x]
 	for line in result:
 		if 'serve_throwup.py' in line:
 			pid = [x for x in line.split(' ') if x][1]
+			print 'Found serve_throwup.py:'
+			print line
+			print 'Eliminating pid %s...' %pid,
 			cmd = 'kill %s' %pid
 			sp.Popen(cmd.split())
-			return
+			print 'Done.'
+	
 	
 	
 def main():
@@ -86,9 +93,13 @@ def main():
 		print 'Need directory'
 		return 'Need directory'
 	
-	''' Kill any server processes named serve_throwup.py and start new server in target directory'''
-	cleanup()
-	throwup( sys.argv[1] )
+	path_to_dir = sys.argv[1]
+	
+	''' Kill any server processes named serve_throwup.py'''
+	cleanup( path_to_dir=path_to_dir )
+	
+	''' Start new server in target directory'''
+	throwup( path_to_dir=path_to_dir )
 		
 		
 	

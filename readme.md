@@ -11,7 +11,10 @@ Usage:
 
 
 throwup_server.py copies the following files to the target directory:
+
 	start_throwup.py	# invoke server script
+	
 	serve_throwup.py	# actual server
+	
 	throwup_filelist	# script for retrieving remote directory's contents
 						#   accessed at http://127.0.0.0:PORT/throwup_filelist

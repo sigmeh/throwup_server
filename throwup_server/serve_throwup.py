@@ -4,14 +4,17 @@ import CGIHTTPServer
 import cgitb
 import time
 import subprocess as sp
+import sys
 
 
-def start_server():
+def start_server( **kwargs ):
 	#cgitb.enable()  # CGI error reporting enabled
+	port = int(kwargs.get('port')) if kwargs.get('port') else 8002
+	
 	server=BaseHTTPServer.HTTPServer
 	handler=CGIHTTPServer.CGIHTTPRequestHandler
-	server_address=("", 8002)
-	handler.cgi_directories=['/','/cgi-bin']
+	server_address=("", port)
+	handler.cgi_directories=['/']
 
 	httpd=server(server_address, handler)
 	httpd.serve_forever()
@@ -19,12 +22,13 @@ def start_server():
 
 def main():
 	try:
-		start_server()
+		port = sys.argv[1]
+		start_server( port=port )
 		
 	except:
 		
-		py_proc = sp.Popen(['ps -fA | grep python'],stdout=sp.PIPE,shell=True).communicate()[0]
-		serv_proc = sp.Popen(['ps -fA | grep server'],stdout=sp.PIPE,shell=True).communicate()[0]
+		py_proc = sp.Popen(['ps -fA | grep python'], stdout=sp.PIPE, shell=True).communicate()[0]
+		serv_proc = sp.Popen(['ps -fA | grep server'], stdout=sp.PIPE, shell=True).communicate()[0]
 		
 		time.sleep(.5)
 		

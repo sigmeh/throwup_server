@@ -1,15 +1,28 @@
 #!/usr/bin/env python
 '''
-This script runs automatically from throwup_server.py via a subprocess call. 
-This script starts the server located in a remote directory, where it has 
-just been copied via the throwup_server.py script.
+start_throwup.py runs automatically from throwup_server.py via 
+a subprocess call. 
 
-This script invokes the python server via a subprocess call to run
-serve_throwup.py on the optionally-specified port. 
-The port is an argument supplied to this program during its invocation.  
+throwup_server.py copies these three files:
+	start_throwup.py
+	serve_throwup.py
+	filelist_throwup.py
+	
+into the target directory, supplied as argument. 
 
+start_throwup.py functions to start the server script (serve_throwup.py)
+on an optionally-specified local port. 
+	
 This script can optionally be run directly:
 	$ python start_throwup.py [port]
+
+In this case, the server is started from the same 
+directory (of start_throwup.py). 
+Invoking a server directly in this way sidesteps instructions 
+implemented in throwup_server.py, namely steps:
+	1. Check for and kill any serve_throwup.py processes
+		(2. is N/A)
+	3. Test for active server
 	
 '''
 

@@ -11,6 +11,7 @@ Usage:
 
 
 <h5>
+
 1. Kill any running process with the name 'serve_throwup.py'
 
 2. Copy server scripts to target remote directory
@@ -18,6 +19,7 @@ Usage:
 3. Start server from remote directory
 
 4. Test whether server is operational
+
 </h5>
 
 These files are copied to the target directory:

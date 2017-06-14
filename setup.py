@@ -1,17 +1,25 @@
 #!/usr/bin/env python
 
 '''
+Install from this script using the command `python setup.py install`
+	-or-
 Generate .tar.gz using `python setup.py sdist`
-Install from this script using `python setup.py install`
+
 '''
 
+import subprocess as sp
 from setuptools import setup
+import sys
+import time
+	
 def main():
+
 	setup(
-		name	= 'throwup_server',
-		version	= '0.1',
-		packages= ['throwup_server'],
-		#install_requires	= [''],
+		name			= 'throwup_server',
+		version			= '0.1',
+		packages		= ['throwup_server'],
+		package_data	= {'throwup_server' : ['filelist_throwup']},
+		#install_requires	= [''],	
 		
 		author			= 'sigmeh',
 		author_email	= '',

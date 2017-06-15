@@ -4,7 +4,7 @@ throwup_server is a python module to generate a simple localhost server, serving
 
 Usage:
 
-	>>> from throwup_server import throwup_server
+	>>> import throwup_server
 	>>> throwup_server.throwup( path_to_dir=path_to_dir [,port=port] )
 	
 	$ python throwup_server.py [path-to-directory] [port]

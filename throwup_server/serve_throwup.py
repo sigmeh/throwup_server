@@ -25,6 +25,8 @@ def main():
 		port = sys.argv[1]
 		start_server( port=port )
 		
+		time.sleep(.5)
+		
 	except:
 		
 		py_proc = sp.Popen(['ps -fA | grep python'], stdout=sp.PIPE, shell=True).communicate()[0]

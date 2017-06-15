@@ -40,11 +40,9 @@ def start(**kwargs):
 		print 'Starting new localhost python server on port %s' %port
 		cmd = ('python serve_throwup.py %s &' % port ).split()
 		sp.Popen(cmd)
-		
-		time.sleep(.5)	
-		
+
 	except:
-		time.sleep(.5)
+		
 		print 'Cannot start server.'
 		
 		

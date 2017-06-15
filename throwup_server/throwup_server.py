@@ -3,7 +3,7 @@
 Start a python server in a remote directory on local machine
 
 Usage:
-	>>> from throwup_server import throwup_server
+	>>> import throwup_server
 	>>> throwup_server.throwup( path_to_dir=path_to_dir [, port=port])
 
 	$ python throwup_server.py [path_to_directory] [port]
@@ -33,7 +33,7 @@ import pkgutil
 def cleanup( **kwargs ):
 	'''Find and kill any serve_throwup.py process'''
 	
-	path_to_dir = kwargs['path_to_dir']
+	#path_to_dir = kwargs['path_to_dir']
 	
 	cmd = 'ps -fA | grep serve_throwup'
 	result = [x for x in sp.Popen(cmd,stdout=sp.PIPE,shell=True).communicate()[0].split('\n') if x]
@@ -51,7 +51,9 @@ def cleanup( **kwargs ):
 #	
 #
 def test_server( path_to_dir, port ):
-	''' Test that new server is running using requests module '''
+	''' Test that new server is running using requests module 
+		The server requires some time to start up...
+	'''
 	time.sleep(1)
 	
 	try:
@@ -60,7 +62,9 @@ def test_server( path_to_dir, port ):
 		print 'Server looks operational.'
 	except Exception as e:
 		print 'Error raised on server call with the following information:'
-		raise e
+		print 'Note that requests module error #61 (connection refused) may occur if server is not yet running
+		print e
+		sys.exit()
 		
 #
 #

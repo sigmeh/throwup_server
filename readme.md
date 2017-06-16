@@ -2,6 +2,11 @@
 
 throwup_server is a python module to generate a simple localhost server, serving from a specific "remote" directory on a given port. 
 
+Installation:
+	
+	python setup.py install
+	
+
 Usage:
 
 	>>> import throwup_server
@@ -28,5 +33,10 @@ These files are copied to the target directory:
 	
 	serve_throwup.py    # actual server
 	
-	filelist_throwup    # script for retrieving remote directory's contents
-	    # 	accessed via http://127.0.0.1:port/throwup_filelist
+	filelist_throwup    # Script for retrieving remote directory's contents
+	   			 		# accessed via http://127.0.0.1:port/filelist_throwup
+	   			 		# dumps a json-encoded list of files from the server's root directory
+
+
+Port specification is optional and defaults to 8002. 
+Path-to-directory is required for module import (as kwarg) but optional for direct command-line invocation (as arg). 

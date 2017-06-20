@@ -9,7 +9,7 @@ Usage:
 '''
 
 
-from throwup_server import throwup
+from throwup_server import throwup, help
 
 
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env python
+'''
+
+'''
+
 help_text = '''
 #########################
 ### throwup_server.py ###
 #########################
-	help menu: access via argument of -h, --h, help, -help, --help 
+	help menu: access via argument of -h, --h, -help, --help 
 	e.g.,
 		$ python throwup_server.py -h
 			or
@@ -72,17 +76,63 @@ def test_server( path_to_dir, port ):
 	''' Test that new server is running using requests module 
 		The server requires some time to start up...
 	'''
-	time.sleep(1)
+	time.sleep(.5)
+	try_count = 5
+	
+	while 1:
+		try:
+			r = requests.get('http://127.0.0.1:%s/' % port )
+			print 'Received status code from server :',r.status_code
+			print 'Server looks operational.'
+			break
+		except Exception as e:
+			if try_count > 0:
+				print 'Could not connect to server. Will retry %s times...' %try_count
+				try_count -= 1
+				time.sleep(.5)	
+			else:
+				print 'Error raised on server call with the following information:'
+				print 'Note that requests module error #61 (connection refused) may occur if server is not yet running'
+				print e
+				break
+	
+	
+#
+#
+#
+def ask_ynq(msg):
+	while 1:
+		resp = raw_input( '%s (y n q): ' % msg )
+		if resp in 'ynq':
+			return resp
+		else:
+			print 'Bad input.'
+			
+#
+#
+#
+def validate_port( port ):
+	if not port:
+		return 8002
 	
 	try:
-		r = requests.get('http://127.0.0.1:%s/' % port )
-		print 'Received status code from server :',r.status_code
-		print 'Server looks operational.'
+		port = int(port)
+		if not 1024 <= port <= 65535:
+			raise Exception
+			
 	except Exception as e:
-		print 'Error raised on server call with the following information:'
-		print 'Note that requests module error #61 (connection refused) may occur if server is not yet running'
-		print e
-		sys.exit()
+		print 'Bad port; Port must be a number between 1024-65535'
+		print 'Omit port number from arguments to use default 8002'
+		
+		resp = ask_ynq('Use default port 8002 instead?')
+		if resp in 'qn': 
+			sys.exit()
+			
+		return 8002	# User responded with affirmative
+	
+	return port 	# Port appears ok
+		
+		
 		
 #
 #
@@ -98,7 +148,7 @@ def throwup( **kwargs ):
 	'''
 	
 	path_to_dir = kwargs.get('path_to_dir')
-	port = kwargs.get('port') if kwargs.get('port') else '8002'
+	port = validate_port( kwargs.get('port') ) 
 	
 	if not path_to_dir:
 		print 'Need directory'
@@ -138,7 +188,7 @@ def throwup( **kwargs ):
 		with open( '%s/%s' % (path_to_dir, script) , 'w' ) as f:
 			f.write( script_files[script] )
 
-	time.sleep(0.5)
+	time.sleep(.5)
 
 
 	#	
@@ -148,7 +198,6 @@ def throwup( **kwargs ):
 	#
 	cmd = 'cd %s; chmod +x *throwup*; python start_throwup.py %s' % (path_to_dir, port)
 	sp.Popen(cmd,shell=True)
-
 	
 	#	
 	#------------------
@@ -167,24 +216,14 @@ def main():
 		print 'Need directory'
 		return 'Need directory'	
 	
-	if sys.argv[1] in ['-h','--h','--help','help','-help']:
+	if sys.argv[1] in ['-h','--h','-help','--help']:
 		print help_text
 		sys.exit()
 			
 	path_to_dir = sys.argv[1]
 	
-	port = sys.argv[2] if len(sys.argv) == 3 else 8002
-	try:
-		port = int(port)
-		if not 1024 <= port <= 65535:
-			raise Exception
-	except Exception as e:
-		print 'Bad port number; must be 1024-65535'
-		print 'Omit port number from arguments to use default 8002'
-		print 'Traceback:'
-		print e
-		sys.exit()
-		
+	port = sys.argv[2] if len(sys.argv > 2) else None
+	
 
 	#
 	#

@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 '''
-
+Start a python server in a remote directory on local machine
 '''
 
 help_text = '''
 #########################
 ### throwup_server.py ###
 #########################
+
 	help menu: access via argument of -h, --h, -help, --help 
 	e.g.,
 		$ python throwup_server.py -h
@@ -34,6 +35,7 @@ These files are copied to the target directory:
 	serve_throwup.py	# actual server
 	filelist_throwup	# retrieves remote directory's contents
 				# access via http://127.0.0.1:port/filelist_throwup
+				
 #######################
 '''
 
@@ -42,6 +44,9 @@ import time
 import subprocess as sp
 import requests
 import pkgutil
+import re
+import json
+import os
 
 #
 #
@@ -52,29 +57,87 @@ def help():
 #
 #
 #
+def bash(cmd, **shell):
+	''' Issue subprocess calls from cmd (standard bash syntax)
+		Determine whether cmd should be split (depending on whether shell=True)
+		Print any error received and return the subprocess command's response	'''
+	
+	resp, err = sp.Popen(cmd if shell else cmd.split(' '), stdout=sp.PIPE, shell=shell).communicate()
+	if err: 
+		print 'Got error on command "%s":' % cmd
+		print err
+	return resp
+
+#
+#
+#
 def cleanup( **kwargs ):
-	'''Find and kill any serve_throwup.py process'''
+	'''	Find and kill any serve_throwup.py process
 	
-	#path_to_dir = kwargs['path_to_dir']
+		1. Test for active localhost server on specified kwarg 'port' using requests 
+			Exception is raised if no server is active at localhost:port. The server can be started normally. 
+		2. If no exception is raised, there is an active server at localhost:port
+			Find the process that spawned the server 
+				If it is serve_throwup.py:
+					Determine its filesystem location and compare to specified kwarg path_to_dir
+	'''
 	
-	cmd = 'ps -fA | grep serve_throwup'
-	result = [x for x in sp.Popen(cmd,stdout=sp.PIPE,shell=True).communicate()[0].split('\n') if x]
-	for line in result:
-		if 'serve_throwup.py' in line:
-			pid = [x for x in line.split(' ') if x][1]
-			print 'Found serve_throwup.py:'
-			print line
-			print 'Eliminating pid %s...' %pid,
-			cmd = 'kill %s' %pid
-			sp.Popen(cmd.split())
-			print 'Done.'
+	
+	path_to_dir = kwargs['path_to_dir']
+	port = kwargs.get('port')
+	
+	
+	'''1. Test for active localhost server'''
+	try:	
+		#r = requests.get('http://localhost:%s' % port)
+		r = requests.post('http://localhost:%s/throwup_options' % port, data = {'package':'pwd'})
+	except Exception as e:
+		print 'Found exception: \n\t'
+		print  e
+		print
+		print 'No active server found at: http://localhost:%s ' % port
+	else:
+		print 'Found active server at: \n\t http://localhost:%s ' % port
+		print 'Server responded with status: %s' % r.status_code
+		
+		
+		
+		
+		cmd = 'ps -fA | grep serve_throwup'		# Leave off ".py" because this cmd becomes its own process (to filter later)
+		result = [x.strip() for x in bash(cmd, shell=True).split('\n') if x]
+		for line in result:
+			if 'serve_throwup.py' in line:
+				throwup_port = re.findall('serve_throwup.py\ (\d{4})',line)[0]	#check port number argument supplied to serve_throwup.py
 			
+				pid = [x for x in line.split(' ') if x][1]
+				cmd = 'lsof -n | grep python | grep %s | grep cwd' % pid
+				cwd_line = bash(cmd, shell=True)
+		
+				cwd = re.search('\/[\w\/]*', cwd_line).group()
+				
+				if cwd == path_to_dir:
+					print 'Current process serve_throwup.py (pid: %s) is already serving from the target directory.'
+					print 'No new server will be started.'
+		
+		
+		#cwd = json.loads(r.text)
+		#print 'http://localhost:%s/throwup_options returns the working directory as:' % port
+		#print cwd
+		
+		
+		#if cwd == path_to_dir:
+		#	print 'A localhost server on the specified port is already serving serve_throwup.py'
+		#	print 'Everything should be running appropriately. Application exiting...'
+
+
+	sys.exit()
 #		
 #	
 #
 def test_server( path_to_dir, port ):
 	''' Test that new server is running using requests module 
-		The server requires some time to start up...
+		The server requires some time to start up
+		Server response is tested five times before giving up
 	'''
 	time.sleep(.5)
 	try_count = 5
@@ -153,22 +216,21 @@ def throwup( **kwargs ):
 	if not path_to_dir:
 		print 'Need directory'
 		return 'Need directory'
+	path_to_dir = os.path.abspath(path_to_dir)
 	
-	
+		
+	#---------------------------------------------------
+	# Identify any currently-running serve_throwup.py processes
 	#	
-	#------------------
-	# Kill any server processes named serve_throwup.py
-	#------------------
-	#
-	cleanup( path_to_dir=path_to_dir )
+	cleanup( path_to_dir=path_to_dir, port=port )
 	
 	
-	#	
-	#------------------
+	
+		
+	#---------------------------------------------------
 	# Read in file data via pkgutil (for copying to remote directory)
-	#------------------
-	#	
-	script_names = ['start_throwup.py', 'serve_throwup.py', 'filelist_throwup']
+	#
+	script_names = ['start_throwup.py', 'serve_throwup.py', 'filelist_throwup', 'throwup_options']
 	
 	try: 
 		script_files = { x : pkgutil.get_data( 'throwup_server', x ) for x in script_names }
@@ -178,31 +240,28 @@ def throwup( **kwargs ):
 		print e
 		sys.exit()	
 	
-	
-	#	
-	#------------------
+		
+	#---------------------------------------------------
 	# Write file data to remote directory
-	#------------------
 	#			
 	for script in script_files:
 		with open( '%s/%s' % (path_to_dir, script) , 'w' ) as f:
 			f.write( script_files[script] )
 
 	time.sleep(.5)
+	
 
-
-	#	
-	#------------------
+	
+	#------------------------------------------------------
 	# Start server via call to remote-directory/start_throwup.py 
-	#------------------
 	#
 	cmd = 'cd %s; chmod +x *throwup*; python start_throwup.py %s' % (path_to_dir, port)
 	sp.Popen(cmd,shell=True)
 	
-	#	
-	#------------------
+	
+	
+	#-------------------------------------------------------
 	# Test that new server is running
-	#------------------
 	#
 	
 	test_server( path_to_dir=path_to_dir, port=port )
@@ -213,16 +272,17 @@ def main():
 	''' Retrieve path_to_dir argument and port number if supplied '''
 	
 	if len(sys.argv) == 1:
-		print 'Need directory'
-		return 'Need directory'	
+		print 'Need to specify directory.'
+		print ' Use -----> $ python throwup_server.py path-to-directory'
+		return 'Need to specify directory'	
 	
 	if sys.argv[1] in ['-h','--h','-help','--help']:
 		print help_text
-		sys.exit()
+		return
 			
 	path_to_dir = sys.argv[1]
 	
-	port = sys.argv[2] if len(sys.argv > 2) else None
+	port = sys.argv[2] if len(sys.argv) > 2 else None
 	
 
 	#

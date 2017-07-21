@@ -3,27 +3,28 @@
 Start a python server in a remote directory on local machine
 '''
 
-help_text = '''
+
+def help(): print '''
 #########################
 ### throwup_server.py ###
 #########################
 
-	help menu: access via argument of -h, --h, -help, --help 
-	e.g.,
-		$ python throwup_server.py -h
-			or
-		>>> throwup_server.help()
-	
+help menu: access via argument of -h, --h, -help, --help 
+e.g.,
+  $ python throwup_server.py -h
+	or
+  >>> throwup_server.help()
+
 Start a python server in a remote directory on local machine
 
 Usage:
-	>>> import throwup_server
-	>>> throwup_server.help()
-	>>> throwup_server.throwup( path_to_dir=path_to_dir [, port=port])
+  >>> import throwup_server
+  >>> throwup_server.help()
+  >>> throwup_server.throwup( path_to_dir=path_to_dir [, port=port])
 
-		or
+	or
 
-	$ python throwup_server.py [path_to_directory] [port]
+  $ python throwup_server.py [path_to_directory] [port]
 
 1. Kill any running process with the name 'serve_throwup.py'
 2. Copy server scripts to remote directory
@@ -31,11 +32,11 @@ Usage:
 4. Test whether server is operational
 
 These files are copied to the target directory:
-	start_throwup.py	# invokes server script
-	serve_throwup.py	# actual server
-	filelist_throwup	# retrieves remote directory's contents
-				# access via http://127.0.0.1:port/filelist_throwup
-				
+  start_throwup.py	# invokes server script
+  serve_throwup.py	# actual server
+  filelist_throwup	# retrieves remote directory's contents
+  			# access via http://127.0.0.1:port/filelist_throwup
+			
 #######################
 '''
 
@@ -48,19 +49,15 @@ import re
 import json
 import os
 
-#
-#
-#
-def help():
-	print help_text
 
 #
 #
 #
 def bash(cmd, **shell):
-	''' Issue subprocess calls from cmd (standard bash syntax)
-		Determine whether cmd should be split (depending on whether shell=True)
-		Print any error received and return the subprocess command's response	'''
+	'''Issue subprocess calls from cmd (standard bash syntax)
+	Determine whether cmd should be split (depending on whether shell=True)
+	Print any error received and return the subprocess command's response	
+	'''
 	
 	resp, err = sp.Popen(cmd if shell else cmd.split(' '), stdout=sp.PIPE, shell=shell).communicate()
 	if err: 
@@ -72,14 +69,15 @@ def bash(cmd, **shell):
 #
 #
 def cleanup( **kwargs ):
-	'''	Find and kill any serve_throwup.py process
+	'''Find (and possibly kill) any serve_throwup.py process
 	
-		1. Test for active localhost server on specified kwarg 'port' using requests 
-			Exception is raised if no server is active at localhost:port. The server can be started normally. 
-		2. If no exception is raised, there is an active server at localhost:port
-			Find the process that spawned the server 
-				If it is serve_throwup.py:
-					Determine its filesystem location and compare to specified kwarg path_to_dir
+	1. Test for active localhost server on specified kwarg 'port' using requests module
+		Exception is raised if no server is active at localhost:port. The server can be started normally. 
+	2. If no exception is raised, there is an active server at localhost:port
+		Find the process that spawned the server (ps command) to get its pid
+		Find the filesystem root directory (cwd) of the server 
+		If the cwd of localhost:port/serve_throwup.py == kwarg path_to_dir (user-specified): do nothing
+		Else: start server
 	'''
 	
 	
@@ -101,6 +99,18 @@ def cleanup( **kwargs ):
 		print 'Server responded with status: %s' % r.status_code
 		
 		
+		# Find each serve_throwup.py process (ps command) and check server port
+		# Get the process id (pid)
+		# Use this pid to filter `lsof` results to obtain cwd from which the serve_throwup.py process was spawned
+		
+		'''
+		cwd = json.loads(r.text)
+		if cwd == path_to_dir:
+			print 'localhost:%s/serve_throwup.py is already serving from the target directory.' % port
+			print 'No new server will be started.'
+			start_new_server = False
+			return start_new_server
+		'''
 		
 		
 		cmd = 'ps -fA | grep serve_throwup'		# Leave off ".py" because this cmd becomes its own process (to filter later)
@@ -113,31 +123,24 @@ def cleanup( **kwargs ):
 				cmd = 'lsof -n | grep python | grep %s | grep cwd' % pid
 				cwd_line = bash(cmd, shell=True)
 		
-				cwd = re.search('\/[\w\/]*', cwd_line).group()
+				cwd = re.search('\/[\w\/]*', cwd_line).group()	#pull cwd from grep line
 				
 				if cwd == path_to_dir:
-					print 'Current process serve_throwup.py (pid: %s) is already serving from the target directory.'
+					print 'Current process serve_throwup.py (pid: %s) is already serving from the target directory.' % pid
 					print 'No new server will be started.'
-		
-		
-		#cwd = json.loads(r.text)
-		#print 'http://localhost:%s/throwup_options returns the working directory as:' % port
-		#print cwd
-		
-		
-		#if cwd == path_to_dir:
-		#	print 'A localhost server on the specified port is already serving serve_throwup.py'
-		#	print 'Everything should be running appropriately. Application exiting...'
+					start_new_server = False
+					return start_new_server
 
-
-	sys.exit()
+	start_new_server = True
+	return start_new_server
+	
 #		
 #	
 #
 def test_server( path_to_dir, port ):
 	''' Test that new server is running using requests module 
-		The server requires some time to start up
-		Server response is tested five times before giving up
+	The server requires some time to start up
+	Server response is tested five times before giving up
 	'''
 	time.sleep(.5)
 	try_count = 5
@@ -202,12 +205,12 @@ def validate_port( port ):
 #
 def throwup( **kwargs ):
 	'''Attempt to start server in remote directory via the following:
-		1. run cleanup() to kill any server process currently running that is named serve_throwup.py
-		2. read the following files and write their contents to the remote directory at path_to_dir:
-			start_throwup.py	# script to start server
-			serve_throwup.py	# server script
-			filelist_throwup.py	# script to retrieve list of files in remote directory
-		3. use requests module to test for active server at 127.0.0.1:port where port is kwarg or 8002 by default
+	1. run cleanup() to kill any server process currently running that is named serve_throwup.py
+	2. read the following files and write their contents to the remote directory at path_to_dir:
+		start_throwup.py	# script to start server
+		serve_throwup.py	# server script
+		filelist_throwup.py	# script to retrieve list of files in remote directory
+	3. use requests module to test for active server at 127.0.0.1:port where port is kwarg or 8002 by default
 	'''
 	
 	path_to_dir = kwargs.get('path_to_dir')
@@ -222,8 +225,12 @@ def throwup( **kwargs ):
 	#---------------------------------------------------
 	# Identify any currently-running serve_throwup.py processes
 	#	
-	cleanup( path_to_dir=path_to_dir, port=port )
-	
+	start_new_server = cleanup( path_to_dir=path_to_dir, port=port )
+	if not start_new_server:
+		print 'Cleanup function indicates that a server in the target directory'
+		print 'is currently serving on the specified port.' 
+		print 'Throwup_server is already operational. Initialization aborting.'
+		sys.exit()
 	
 	
 		
@@ -277,8 +284,7 @@ def main():
 		return 'Need to specify directory'	
 	
 	if sys.argv[1] in ['-h','--h','-help','--help']:
-		print help_text
-		return
+		return help()
 			
 	path_to_dir = sys.argv[1]
 	
@@ -288,9 +294,9 @@ def main():
 	#
 	#
 	''' Start new server in target directory. The following functions are performed:
-		1. cleanup	(kill active server)
-		2. throwup	(copy server files and start server)
-		3. test		(test server response)
+	1. cleanup	(kill active server)
+	2. throwup	(copy server files and start server)
+	3. test		(test server response)
 	'''
 	throwup( path_to_dir=path_to_dir, port=port )
 	#

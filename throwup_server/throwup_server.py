@@ -196,9 +196,7 @@ def validate_port( port ):
 			
 		return 8002	# User responded with affirmative
 	
-	return port 	# Port appears ok
-		
-		
+	return port 	# Port appears ok		
 		
 #
 #
@@ -217,8 +215,12 @@ def throwup( **kwargs ):
 	port = validate_port( kwargs.get('port') ) 
 	
 	if not path_to_dir:
-		print 'Need directory'
-		return 'Need directory'
+		resp = raw_input('No directory was specified. Use current directory? (ynq): ')
+		if resp != 'y': return
+		path_to_dir = os.getcwd()
+		
+		#print 'Need directory'
+		#return 'Need directory'
 	path_to_dir = os.path.abspath(path_to_dir)
 	
 		
@@ -237,7 +239,7 @@ def throwup( **kwargs ):
 	#---------------------------------------------------
 	# Read in file data via pkgutil (for copying to remote directory)
 	#
-	script_names = ['start_throwup.py', 'serve_throwup.py', 'filelist_throwup', 'throwup_options']
+	script_names = ['start_throwup.py', 'serve_throwup.py', 'filelist_throwup']
 	
 	try: 
 		script_files = { x : pkgutil.get_data( 'throwup_server', x ) for x in script_names }
